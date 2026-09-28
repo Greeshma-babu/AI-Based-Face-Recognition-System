@@ -2,7 +2,7 @@ task: classify
 mode: train
 model: C:\AI\FaceAttendence\AI-Based-Face-Recognition-System\runs\classify\object_classification\weights\best.pt
 data: C:\AI\FaceAttendence\AI-Based-Face-Recognition-System\datasets
-epochs: 50
+epochs: 20
 time: null
 patience: 100
 batch: 8

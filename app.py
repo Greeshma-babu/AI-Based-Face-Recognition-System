@@ -1,4 +1,5 @@
 import hashlib
+import csv
 from datetime import date, datetime
 
 import pandas as pd
@@ -24,6 +25,12 @@ st.set_page_config(
 
 FASTAPI_URL = "http://127.0.0.1:8000"
 
+BASE_DIR = r"C:\AI\FaceAttendence\AI-Based-Face-Recognition-System"
+
+EMPLOYEES_FILE = BASE_DIR + r"\output\employees.csv"
+
+ATTENDANCE_FILE = BASE_DIR + r"\output\attendance.csv"
+
 
 # ============================================================
 # SESSION STATE
@@ -36,15 +43,7 @@ if "employees" not in st.session_state:
     st.session_state.employees = []
 
 if "attendance" not in st.session_state:
-    st.session_state.attendance = {
-        "Mon": 39,
-        "Tue": 41,
-        "Wed": 37,
-        "Thu": 38,
-        "Fri": 40,
-        "Sat": 22,
-        "Sun": 14,
-    }
+    st.session_state.attendance = {}
 
 if "present_today" not in st.session_state:
     st.session_state.present_today = 0
@@ -72,188 +71,188 @@ if "record_result" not in st.session_state:
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
-    }
-
-    .stApp {
-        background: #0d1218;
-        color: #f4f7fb;
-    }
-
-    [data-testid="stHeader"] {
-        background: #0d1218;
-    }
-
-    [data-testid="stSidebar"] {
-        background: #18212c;
-        border-right: 1px solid #273342;
-    }
-
-    [data-testid="stSidebar"] > div:first-child {
-        padding-top: 1rem;
-    }
-
-    /* Sidebar buttons */
-    [data-testid="stSidebar"] div.stButton > button {
-        width: 100%;
-        text-align: left;
-        border: 0;
-        border-radius: 7px;
-        background: transparent;
-        color: #9cabc0;
-        padding: 10px 12px;
-        margin: 2px 0;
-        font-size: 13px;
-    }
-
-    [data-testid="stSidebar"] div.stButton > button:hover {
-        background: #27313d;
-        color: #ffffff;
-    }
-
-    [data-testid="stSidebar"] div.stButton > button[kind="primary"] {
-        background: #3b3832 !important;
-        color: #f5a623 !important;
-    }
-
-    /* Main headings */
-    .main-title {
-        font-size: 29px;
-        font-weight: 700;
-        color: #f7f9fc;
-        margin-bottom: 3px;
-    }
-
-    .subtitle {
-        color: #91a0b5;
-        font-size: 13px;
-        margin-bottom: 8px;
-    }
-
-    .time-label {
-        color: #7890ac;
-        font-size: 11px;
-        text-align: right;
-        padding-top: 10px;
-    }
-
-    /* Metric cards */
-    .metric-card {
-        background: #19232f;
-        border: 1px solid #2d3a49;
-        border-radius: 8px;
-        padding: 16px;
-        min-height: 105px;
-    }
-
-    .metric-label {
-        color: #91a0b5;
-        font-size: 11px;
-    }
-
-    .metric-value {
-        color: #f5a623;
-        font-size: 22px;
-        font-weight: 700;
-        margin-top: 5px;
-    }
-
-    .metric-value-light {
-        color: #f2f5f9;
-        font-size: 22px;
-        font-weight: 700;
-        margin-top: 5px;
-    }
-
-    .metric-note {
-        color: #65e69a;
-        font-size: 10px;
-        margin-top: 4px;
-    }
-
-    .metric-note-muted {
-        color: #8c9caf;
-        font-size: 10px;
-        margin-top: 4px;
-    }
-
-    /* Native Streamlit containers */
-    div[data-testid="stVerticalBlockBorderWrapper"] {
-        background: #19232f;
-        border-color: #2d3a49;
-        border-radius: 8px;
-    }
-
-    /* Inputs */
-    div[data-baseweb="input"] > div,
-    div[data-baseweb="textarea"] > div {
-        background: #202b38;
-        border-color: #3b4b5f;
-    }
-
-    div[data-baseweb="input"] input,
-    div[data-baseweb="textarea"] textarea {
-        color: #f4f7fb;
-    }
-
-    div[data-testid="stFileUploader"] {
-        background: #202b38;
-        border: 1px dashed #3b4b5f;
-        border-radius: 8px;
-    }
-
-    div[data-testid="stFileUploader"] section {
-        padding: 10px;
-    }
-
-    div[data-testid="stFileUploader"] label {
-        color: #a7b4c5;
-    }
-
-    div[data-testid="stCameraInput"] {
-        background: #202b38;
-        border: 1px solid #2d3a49;
-        border-radius: 8px;
-    }
-
-    /* Primary buttons */
-    button[kind="primary"] {
-        background: #f5a623 !important;
-        color: #111820 !important;
-        border: none !important;
-        font-weight: 600 !important;
-    }
-
-    button[kind="primary"]:hover {
-        background: #ffc15a !important;
-    }
-
-    /* Progress */
-    div[data-testid="stProgress"] > div > div > div {
-        background: #f5a623;
-    }
-
-    /* Dataframe */
-    [data-testid="stDataFrame"] {
-        border: 1px solid #2d3a49;
-        border-radius: 8px;
-    }
-
-    hr {
-        border-color: #2d3a49;
-    }
-
-    .footer-text {
-        text-align: center;
-        color: #5f7187;
-        font-size: 10px;
-        margin-top: 35px;
-        padding-bottom: 15px;
-    }
-    </style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'); 
+ 
+    html, body, [class*="css"] { 
+        font-family: 'Inter', sans-serif; 
+    } 
+ 
+    .stApp { 
+        background: #0d1218; 
+        color: #f4f7fb; 
+    } 
+ 
+    [data-testid="stHeader"] { 
+        background: #0d1218; 
+    } 
+ 
+    [data-testid="stSidebar"] { 
+        background: #18212c; 
+        border-right: 1px solid #273342; 
+    } 
+ 
+    [data-testid="stSidebar"] > div:first-child { 
+        padding-top: 1rem; 
+    } 
+ 
+    /* Sidebar buttons */ 
+    [data-testid="stSidebar"] div.stButton > button { 
+        width: 100%; 
+        text-align: left; 
+        border: 0; 
+        border-radius: 7px; 
+        background: transparent; 
+        color: #9cabc0; 
+        padding: 10px 12px; 
+        margin: 2px 0; 
+        font-size: 13px; 
+    } 
+ 
+    [data-testid="stSidebar"] div.stButton > button:hover { 
+        background: #27313d; 
+        color: #ffffff; 
+    } 
+ 
+    [data-testid="stSidebar"] div.stButton > button[kind="primary"] { 
+        background: #3b3832 !important; 
+        color: #f5a623 !important; 
+    } 
+ 
+    /* Main headings */ 
+    .main-title { 
+        font-size: 29px; 
+        font-weight: 700; 
+        color: #f7f9fc; 
+        margin-bottom: 3px; 
+    } 
+ 
+    .subtitle { 
+        color: #91a0b5; 
+        font-size: 13px; 
+        margin-bottom: 8px; 
+    } 
+ 
+    .time-label { 
+        color: #7890ac; 
+        font-size: 11px; 
+        text-align: right; 
+        padding-top: 10px; 
+    } 
+ 
+    /* Metric cards */ 
+    .metric-card { 
+        background: #19232f; 
+        border: 1px solid #2d3a49; 
+        border-radius: 8px; 
+        padding: 16px; 
+        min-height: 105px; 
+    } 
+ 
+    .metric-label { 
+        color: #91a0b5; 
+        font-size: 11px; 
+    } 
+ 
+    .metric-value { 
+        color: #f5a623; 
+        font-size: 22px; 
+        font-weight: 700; 
+        margin-top: 5px; 
+    } 
+ 
+    .metric-value-light { 
+        color: #f2f5f9; 
+        font-size: 22px; 
+        font-weight: 700; 
+        margin-top: 5px; 
+    } 
+ 
+    .metric-note { 
+        color: #65e69a; 
+        font-size: 10px; 
+        margin-top: 4px; 
+    } 
+ 
+    .metric-note-muted { 
+        color: #8c9caf; 
+        font-size: 10px; 
+        margin-top: 4px; 
+    } 
+ 
+    /* Native Streamlit containers */ 
+    div[data-testid="stVerticalBlockBorderWrapper"] { 
+        background: #19232f; 
+        border-color: #2d3a49; 
+        border-radius: 8px; 
+    } 
+ 
+    /* Inputs */ 
+    div[data-baseweb="input"] > div, 
+    div[data-baseweb="textarea"] > div { 
+        background: #202b38; 
+        border-color: #3b4b5f; 
+    } 
+ 
+    div[data-baseweb="input"] input, 
+    div[data-baseweb="textarea"] textarea { 
+        color: #f4f7fb; 
+    } 
+ 
+    div[data-testid="stFileUploader"] { 
+        background: #202b38; 
+        border: 1px dashed #3b4b5f; 
+        border-radius: 8px; 
+    } 
+ 
+    div[data-testid="stFileUploader"] section { 
+        padding: 10px; 
+    } 
+ 
+    div[data-testid="stFileUploader"] label { 
+        color: #a7b4c5; 
+    } 
+ 
+    div[data-testid="stCameraInput"] { 
+        background: #202b38; 
+        border: 1px solid #2d3a49; 
+        border-radius: 8px; 
+    } 
+ 
+    /* Primary buttons */ 
+    button[kind="primary"] { 
+        background: #f5a623 !important; 
+        color: #111820 !important; 
+        border: none !important; 
+        font-weight: 600 !important; 
+    } 
+ 
+    button[kind="primary"]:hover { 
+        background: #ffc15a !important; 
+    } 
+ 
+    /* Progress */ 
+    div[data-testid="stProgress"] > div > div > div { 
+        background: #f5a623; 
+    } 
+ 
+    /* Dataframe */ 
+    [data-testid="stDataFrame"] { 
+        border: 1px solid #2d3a49; 
+        border-radius: 8px; 
+    } 
+ 
+    hr { 
+        border-color: #2d3a49; 
+    } 
+ 
+    .footer-text { 
+        text-align: center; 
+        color: #5f7187; 
+        font-size: 10px; 
+        margin-top: 35px; 
+        padding-bottom: 15px; 
+    } 
+    </style> 
     """,
     unsafe_allow_html=True,
 )
@@ -296,8 +295,417 @@ def get_error_message(response):
 
 
 # ============================================================
+# DASHBOARD DATA HELPERS
+# ============================================================
+
+
+def read_employees_from_csv():
+    """
+    Read registered employees directly from output/employees.csv.
+    Supports:
+        employee_id,name
+        EMP-ID,Name
+        Employee ID,Name
+    """
+
+    employees = []
+
+    try:
+        df = pd.read_csv(
+            EMPLOYEES_FILE,
+            encoding="utf-8-sig",
+        )
+
+    except UnicodeDecodeError:
+        try:
+            df = pd.read_csv(
+                EMPLOYEES_FILE,
+                encoding="utf-16",
+            )
+        except Exception:
+            return employees
+
+    except Exception:
+        return employees
+
+    if df.empty:
+        return employees
+
+    # Normalize column names
+    normalized_columns = {
+        str(column)
+        .strip()
+        .lower()
+        .replace("-", "")
+        .replace("_", "")
+        .replace(" ", ""): column
+        for column in df.columns
+    }
+
+    employee_id_column = None
+    name_column = None
+
+    for normalized, original in normalized_columns.items():
+
+        if normalized in {
+            "employeeid",
+            "empid",
+            "id",
+            "employee",
+        }:
+            employee_id_column = original
+
+        if normalized in {
+            "name",
+            "employeename",
+        }:
+            name_column = original
+
+    # Fallback to first two columns
+    if employee_id_column is None and len(df.columns) >= 1:
+        employee_id_column = df.columns[0]
+
+    if name_column is None and len(df.columns) >= 2:
+        name_column = df.columns[1]
+
+    if employee_id_column is None:
+        return employees
+
+    for _, row in df.iterrows():
+
+        employee_id = str(row.get(employee_id_column, "")).strip()
+
+        if not employee_id:
+            continue
+
+        name = ""
+
+        if name_column is not None:
+            name = str(row.get(name_column, "")).strip()
+
+        if name.lower() == "nan":
+            name = ""
+
+        employees.append(
+            {
+                "id": employee_id,
+                "name": name,
+            }
+        )
+
+    return employees
+
+
+def read_attendance_csv():
+    """
+    Read attendance.csv directly.
+
+    Expected structure:
+
+    Date (DD-MM-YYYY),Total Attendance,EMP-1001,EMP-1002,...
+
+    Returns the complete DataFrame.
+    """
+
+    try:
+
+        df = pd.read_csv(
+            ATTENDANCE_FILE,
+            encoding="utf-8-sig",
+        )
+
+    except UnicodeDecodeError:
+
+        try:
+            df = pd.read_csv(
+                ATTENDANCE_FILE,
+                encoding="utf-16",
+            )
+        except Exception:
+            return pd.DataFrame()
+
+    except Exception:
+        return pd.DataFrame()
+
+    if df.empty:
+        return pd.DataFrame()
+
+    # Remove completely empty rows
+    df = df.dropna(how="all").reset_index(drop=True)
+
+    return df
+
+
+def find_column(df, possible_names):
+    """
+    Find a column using normalized names.
+    """
+
+    normalized_targets = {
+        str(name).strip().lower().replace("-", "").replace("_", "").replace(" ", "")
+        for name in possible_names
+    }
+
+    for column in df.columns:
+
+        normalized = (
+            str(column)
+            .strip()
+            .lower()
+            .replace("-", "")
+            .replace("_", "")
+            .replace(" ", "")
+        )
+
+        if normalized in normalized_targets:
+            return column
+
+    return None
+
+
+def get_today_attendance():
+    """
+    Get today's attendance information from attendance.csv.
+
+    Returns:
+        total_attendance
+        present_employee_ids
+        today_row
+    """
+
+    df = read_attendance_csv()
+
+    if df.empty:
+        return 0, set(), None
+
+    date_column = find_column(
+        df,
+        [
+            "Date (DD-MM-YYYY)",
+            "Date",
+            "Attendance Date",
+        ],
+    )
+
+    total_column = find_column(
+        df,
+        [
+            "Total Attendance",
+            "TotalAttendance",
+            "Total",
+        ],
+    )
+
+    if date_column is None:
+        return 0, set(), None
+
+    today_string = date.today().strftime("%d-%m-%Y")
+
+    today_row = None
+
+    for _, row in df.iterrows():
+
+        row_date = str(row.get(date_column, "")).strip()
+
+        if row_date == today_string:
+            today_row = row
+            break
+
+    if today_row is None:
+        return 0, set(), None
+
+    # --------------------------------------------------------
+    # Total Attendance
+    # --------------------------------------------------------
+
+    total_attendance = 0
+
+    if total_column is not None:
+
+        try:
+            value = today_row.get(
+                total_column,
+                0,
+            )
+
+            if pd.notna(value):
+                total_attendance = int(float(value))
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+            total_attendance = 0
+
+    # --------------------------------------------------------
+    # Employee IDs marked present today
+    # --------------------------------------------------------
+
+    present_employee_ids = set()
+
+    employees = read_employees_from_csv()
+
+    employee_ids = {employee["id"] for employee in employees}
+
+    for employee_id in employee_ids:
+
+        if employee_id not in df.columns:
+            continue
+
+        try:
+
+            value = today_row.get(
+                employee_id,
+                0,
+            )
+
+            if pd.notna(value):
+
+                numeric_value = float(value)
+
+                if numeric_value >= 1:
+                    present_employee_ids.add(employee_id)
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+            continue
+
+    # --------------------------------------------------------
+    # Fallback:
+    # If employee columns were not found, use Total Attendance
+    # --------------------------------------------------------
+
+    if not present_employee_ids and total_attendance > 0:
+
+        employee_columns_found = any(
+            employee_id in df.columns for employee_id in employee_ids
+        )
+
+        if not employee_columns_found:
+            return (
+                total_attendance,
+                set(),
+                today_row,
+            )
+
+    return (
+        total_attendance,
+        present_employee_ids,
+        today_row,
+    )
+
+
+def get_dashboard_data():
+    """
+    Get all Dashboard values directly from CSV files.
+    """
+
+    employees = read_employees_from_csv()
+
+    total_registered = len(employees)
+
+    total_attendance, present_employee_ids, today_row = get_today_attendance()
+
+    # --------------------------------------------------------
+    # If employee columns are available, use their values to
+    # calculate today's present count.
+    #
+    # Otherwise use Total Attendance.
+    # --------------------------------------------------------
+
+    if today_row is not None:
+
+        employee_column_count = 0
+
+        for employee in employees:
+
+            employee_id = employee["id"]
+
+            if employee_id in today_row.index:
+                employee_column_count += 1
+
+        if employee_column_count > 0:
+
+            present_today = len(present_employee_ids)
+
+        else:
+
+            present_today = total_attendance
+
+    else:
+
+        present_today = 0
+
+    # --------------------------------------------------------
+    # Total attendance value
+    #
+    # This is taken directly from today's
+    # "Total Attendance" column.
+    # --------------------------------------------------------
+
+    total_attendance_value = total_attendance
+
+    # --------------------------------------------------------
+    # Employee chart data
+    # --------------------------------------------------------
+
+    employee_chart = []
+
+    for employee in employees:
+
+        employee_id = employee["id"]
+
+        value = 0
+
+        if today_row is not None:
+
+            try:
+
+                if employee_id in today_row.index:
+
+                    raw_value = today_row.get(
+                        employee_id,
+                        0,
+                    )
+
+                    if pd.notna(raw_value):
+                        value = int(float(raw_value))
+
+            except (
+                TypeError,
+                ValueError,
+            ):
+                value = 0
+
+        employee_chart.append(
+            {
+                "employee_id": employee_id,
+                "attendance": value,
+            }
+        )
+
+    not_checked = max(
+        0,
+        total_registered - present_today,
+    )
+
+    return {
+        "employees": employees,
+        "registered_count": total_registered,
+        "total_attendance": total_attendance_value,
+        "present_today": present_today,
+        "not_checked": not_checked,
+        "employee_chart": employee_chart,
+    }
+
+
+# ============================================================
 # SIDEBAR
 # ============================================================
+
+dashboard_data = get_dashboard_data()
 
 with st.sidebar:
     # Logo
@@ -339,13 +747,15 @@ with st.sidebar:
     st.divider()
 
     st.caption("SYSTEM SUMMARY")
+
     st.metric(
         "People registered",
-        len(st.session_state.employees),
+        dashboard_data["registered_count"],
     )
+
     st.metric(
         "Marked present today",
-        st.session_state.present_today,
+        dashboard_data["present_today"],
     )
 
 
@@ -382,6 +792,9 @@ def page_header(title, subtitle):
 
 if st.session_state.page == "Dashboard":
 
+    # Refresh Dashboard data directly from CSV
+    dashboard_data = get_dashboard_data()
+
     page_header(
         "Dashboard",
         "Attendance overview for the current week.",
@@ -389,88 +802,144 @@ if st.session_state.page == "Dashboard":
 
     m1, m2, m3 = st.columns(3)
 
+    # --------------------------------------------------------
+    # TOTAL ATTENDANCE
+    # From attendance.csv -> today's Total Attendance
+    # --------------------------------------------------------
+
     with m1:
         with st.container(border=True):
-            st.markdown("**Average attendance**")
+
+            st.markdown("**Total attendance**")
+
             st.markdown(
-                '<div class="metric-value">91%</div>',
+                f'<div class="metric-value">'
+                f'{dashboard_data["total_attendance"]}'
+                f"</div>",
                 unsafe_allow_html=True,
             )
-            st.caption("▲ 3% vs last week")
+
+            st.caption("From attendance.csv")
+
+    # --------------------------------------------------------
+    # REGISTERED EMPLOYEES
+    # From employees.csv
+    # --------------------------------------------------------
 
     with m2:
         with st.container(border=True):
+
             st.markdown("**No. of employees**")
+
             st.markdown(
                 f'<div class="metric-value-light">'
-                f"{len(st.session_state.employees)}</div>",
+                f'{dashboard_data["registered_count"]}'
+                f"</div>",
                 unsafe_allow_html=True,
             )
+
             st.caption("Registered employees")
 
+    # --------------------------------------------------------
+    # PRESENT TODAY
+    # From attendance.csv
+    # --------------------------------------------------------
+
     with m3:
-        not_checked = max(
-            0,
-            len(st.session_state.employees) - st.session_state.present_today,
-        )
 
         with st.container(border=True):
+
             st.markdown("**Present today**")
+
             st.markdown(
                 f'<div class="metric-value-light">'
-                f"{st.session_state.present_today}</div>",
+                f'{dashboard_data["present_today"]}'
+                f"</div>",
                 unsafe_allow_html=True,
             )
-            st.caption(f"{not_checked} not yet checked in")
+
+            st.caption(f'{dashboard_data["not_checked"]} not yet checked in')
 
     st.write("")
 
+    # ========================================================
+    # EMPLOYEE ATTENDANCE BAR CHART
+    # ========================================================
+
     with st.container(border=True):
-        st.markdown("**Overall attendance — this week**")
-        st.caption("All employees, Monday to Sunday")
 
-        days = list(st.session_state.attendance.keys())
-        values = list(st.session_state.attendance.values())
+        st.markdown("**Employee attendance — today**")
 
-        fig = go.Figure()
+        st.caption("Attendance status based on Employee ID from attendance.csv")
 
-        fig.add_trace(
-            go.Bar(
-                x=days,
-                y=values,
-                text=values,
-                textposition="outside",
-                marker_color="#f5a623",
-                width=0.62,
-                hovertemplate="%{x}: %{y}<extra></extra>",
+        employee_chart = dashboard_data["employee_chart"]
+
+        if employee_chart:
+
+            chart_df = pd.DataFrame(employee_chart)
+
+            fig = go.Figure()
+
+            fig.add_trace(
+                go.Bar(
+                    x=chart_df["employee_id"],
+                    y=chart_df["attendance"],
+                    text=chart_df["attendance"],
+                    textposition="outside",
+                    marker_color="#f5a623",
+                    width=0.62,
+                    hovertemplate=(
+                        "Employee ID: %{x}" "<br>Attendance: %{y}" "<extra></extra>"
+                    ),
+                )
             )
-        )
 
-        fig.update_layout(
-            height=330,
-            margin=dict(l=25, r=25, t=20, b=25),
-            paper_bgcolor="#19232f",
-            plot_bgcolor="#19232f",
-            font=dict(color="#91a0b5", size=10),
-            xaxis=dict(
-                showgrid=False,
-                zeroline=False,
-                linecolor="#293746",
-            ),
-            yaxis=dict(
-                showgrid=False,
-                zeroline=False,
-                visible=False,
-                range=[0, max(values) + 8],
-            ),
-            showlegend=False,
-        )
+            max_value = max(
+                1,
+                int(chart_df["attendance"].max()),
+            )
 
-        st.plotly_chart(
-            fig,
-            width="stretch",
-            config={"displayModeBar": False},
-        )
+            fig.update_layout(
+                height=330,
+                margin=dict(
+                    l=25,
+                    r=25,
+                    t=20,
+                    b=25,
+                ),
+                paper_bgcolor="#19232f",
+                plot_bgcolor="#19232f",
+                font=dict(
+                    color="#91a0b5",
+                    size=10,
+                ),
+                xaxis=dict(
+                    showgrid=False,
+                    zeroline=False,
+                    linecolor="#293746",
+                    title="Employee ID",
+                ),
+                yaxis=dict(
+                    showgrid=False,
+                    zeroline=False,
+                    visible=False,
+                    range=[
+                        0,
+                        max_value + 1,
+                    ],
+                ),
+                showlegend=False,
+            )
+
+            st.plotly_chart(
+                fig,
+                width="stretch",
+                config={"displayModeBar": False},
+            )
+
+        else:
+
+            st.info("No registered employees found in employees.csv.")
 
 
 # ============================================================
@@ -681,6 +1150,7 @@ elif st.session_state.page == "Record":
     if result is not None:
 
         if result.get("success"):
+
             message = result.get(
                 "message",
                 "Attendance recorded successfully.",
@@ -704,10 +1174,12 @@ elif st.session_state.page == "Record":
                     )
 
         else:
+
             message = result.get(
                 "message",
                 "Sorry, we couldn't recognize you. Please try again.",
             )
+
             st.error("Recognition Failed")
             st.warning(message)
 
@@ -793,7 +1265,9 @@ elif st.session_state.page == "Record":
                 )
 
                 with st.spinner("Recognizing face and recording attendance..."):
+
                     try:
+
                         image_name = getattr(
                             selected_image,
                             "name",

@@ -12,6 +12,8 @@
 #   datasets/test/<name>
 #       ↓
 #   train.py
+#       ↓
+#   BACKGROUND TRAINING
 #
 # ATTENDANCE
 #   Streamlit
@@ -82,9 +84,13 @@ OUTPUT_DIR = BASE_DIR / "output"
 
 EMPLOYEES_FILE = OUTPUT_DIR / "employees.csv"
 
+ATTENDANCE_FILE = OUTPUT_DIR / "attendance.csv"
+
 RECORD_FILE = BASE_DIR / "record.py"
 
 TRAIN_SCRIPT = BASE_DIR / "train.py"
+
+TRAINING_LOG = OUTPUT_DIR / "training.log"
 
 
 # ============================================================
@@ -270,9 +276,9 @@ def read_employees_file():
 
             name_index = index
 
-    # --------------------------------------------------------
-    # Fallback
-    # --------------------------------------------------------
+    # ========================================================
+    # FALLBACK
+    # ========================================================
 
     if employee_id_index is None:
         employee_id_index = 0
@@ -288,7 +294,6 @@ def read_employees_file():
             employee_id_index,
             name_index,
         ):
-
             continue
 
         employee_id = str(row[employee_id_index]).strip()
@@ -334,10 +339,12 @@ def ensure_employees_file():
     print("=" * 70)
     print("EMPLOYEES CSV")
     print("=" * 70)
+
     print(
         "File:",
         EMPLOYEES_FILE,
     )
+
     print(
         "Employees found:",
         len(employees),
@@ -477,6 +484,157 @@ def safe_name(name):
 
 
 # ============================================================
+# START BACKGROUND TRAINING
+#
+# IMPORTANT:
+#
+# This version DOES NOT use:
+#
+#     DETACHED_PROCESS
+#
+# and DOES NOT use:
+#
+#     stdout=DEVNULL
+#     stderr=DEVNULL
+#
+# Instead:
+#
+#     train.py runs silently in the background
+#     YOLO output goes to:
+#
+#     output/training.log
+#
+# ============================================================
+
+
+def start_background_training():
+
+    # ========================================================
+    # CHECK TRAIN.PY
+    # ========================================================
+
+    if not TRAIN_SCRIPT.exists():
+
+        raise FileNotFoundError(f"train.py not found:\n{TRAIN_SCRIPT}")
+
+    print()
+    print("=" * 70)
+    print("STARTING YOLO TRAINING IN BACKGROUND")
+    print("=" * 70)
+
+    print(
+        "Training script:",
+        TRAIN_SCRIPT,
+    )
+
+    print(
+        "Python executable:",
+        sys.executable,
+    )
+
+    print(
+        "Training log:",
+        TRAINING_LOG,
+    )
+
+    # ========================================================
+    # OPEN TRAINING LOG
+    # ========================================================
+
+    log_file = open(
+        TRAINING_LOG,
+        "a",
+        encoding="utf-8",
+        buffering=1,
+    )
+
+    # ========================================================
+    # WRITE START INFORMATION
+    # ========================================================
+
+    log_file.write("\n")
+    log_file.write("=" * 80 + "\n")
+    log_file.write("YOLO TRAINING PROCESS STARTED\n")
+    log_file.write("=" * 80 + "\n")
+
+    log_file.write(f"Python: {sys.executable}\n")
+
+    log_file.write(f"Script: {TRAIN_SCRIPT}\n")
+
+    log_file.write(f"Working directory: {BASE_DIR}\n")
+
+    log_file.flush()
+
+    # ========================================================
+    # WINDOWS
+    # ========================================================
+
+    if sys.platform.startswith("win"):
+
+        creation_flags = subprocess.CREATE_NO_WINDOW
+
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                "-u",
+                str(TRAIN_SCRIPT),
+            ],
+            cwd=str(BASE_DIR),
+            stdin=subprocess.DEVNULL,
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            creationflags=creation_flags,
+        )
+
+    # ========================================================
+    # LINUX / MAC
+    # ========================================================
+
+    else:
+
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                "-u",
+                str(TRAIN_SCRIPT),
+            ],
+            cwd=str(BASE_DIR),
+            stdin=subprocess.DEVNULL,
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+
+    # ========================================================
+    # WRITE PID
+    # ========================================================
+
+    log_file.write(f"Background training PID: " f"{process.pid}\n")
+
+    log_file.flush()
+
+    print(
+        "Background training PID:",
+        process.pid,
+    )
+
+    print(
+        "Training log:",
+        TRAINING_LOG,
+    )
+
+    print("=" * 70)
+    print("YOLO TRAINING PROCESS LAUNCHED")
+    print("=" * 70)
+
+    # ========================================================
+    # DO NOT WAIT FOR TRAINING
+    # ========================================================
+
+    return process.pid
+
+
+# ============================================================
 # REGISTER
 # ============================================================
 
@@ -492,9 +650,9 @@ async def register(
 
     employee_id = employee_id.strip()
 
-    # --------------------------------------------------------
-    # Validate name
-    # --------------------------------------------------------
+    # ========================================================
+    # VALIDATE NAME
+    # ========================================================
 
     if not name:
 
@@ -503,9 +661,9 @@ async def register(
             detail="Employee name is required.",
         )
 
-    # --------------------------------------------------------
-    # Validate employee ID
-    # --------------------------------------------------------
+    # ========================================================
+    # VALIDATE EMPLOYEE ID
+    # ========================================================
 
     if not employee_id:
 
@@ -514,9 +672,9 @@ async def register(
             detail="Employee ID is required.",
         )
 
-    # --------------------------------------------------------
-    # Validate number of images
-    # --------------------------------------------------------
+    # ========================================================
+    # VALIDATE NUMBER OF IMAGES
+    # ========================================================
 
     if len(images) < 15:
 
@@ -525,9 +683,9 @@ async def register(
             detail=("At least 15 images are required. " f"Received {len(images)}."),
         )
 
-    # --------------------------------------------------------
-    # Check duplicate employee
-    # --------------------------------------------------------
+    # ========================================================
+    # CHECK DUPLICATE EMPLOYEE
+    # ========================================================
 
     existing_employee = find_employee(employee_id)
 
@@ -538,34 +696,34 @@ async def register(
             detail=(f"Employee ID '{employee_id}' " "is already registered."),
         )
 
-    # --------------------------------------------------------
-    # Person name
-    # --------------------------------------------------------
+    # ========================================================
+    # PERSON NAME
+    # ========================================================
 
     person_name = safe_name(name)
 
-    # --------------------------------------------------------
-    # Dataset directories
-    # --------------------------------------------------------
+    # ========================================================
+    # DATASET DIRECTORIES
+    # ========================================================
 
     train_person_dir = TRAIN_DIR / person_name
 
     test_person_dir = TEST_DIR / person_name
 
-    # --------------------------------------------------------
-    # Prevent duplicate person
-    # --------------------------------------------------------
+    # ========================================================
+    # PREVENT DUPLICATE PERSON
+    # ========================================================
 
     if train_person_dir.exists():
 
         raise HTTPException(
             status_code=400,
-            detail=(f"Training folder already exists " f"for '{person_name}'."),
+            detail=("Training folder already exists " f"for '{person_name}'."),
         )
 
-    # --------------------------------------------------------
-    # Valid image extensions
-    # --------------------------------------------------------
+    # ========================================================
+    # VALID IMAGE EXTENSIONS
+    # ========================================================
 
     valid_extensions = {
         ".jpg",
@@ -586,9 +744,9 @@ async def register(
 
             valid_images.append(image)
 
-    # --------------------------------------------------------
-    # Check valid images
-    # --------------------------------------------------------
+    # ========================================================
+    # CHECK VALID IMAGES
+    # ========================================================
 
     if len(valid_images) < 15:
 
@@ -597,47 +755,47 @@ async def register(
             detail=("At least 15 valid JPG, JPEG " "or PNG images are required."),
         )
 
-    # --------------------------------------------------------
-    # Randomly select exactly 15
-    # --------------------------------------------------------
+    # ========================================================
+    # RANDOMLY SELECT EXACTLY 15
+    # ========================================================
 
     selected_images = random.sample(
         valid_images,
         15,
     )
 
-    # --------------------------------------------------------
-    # Randomly select 5 test images
-    # --------------------------------------------------------
+    # ========================================================
+    # RANDOMLY SELECT 5 TEST IMAGES
+    # ========================================================
 
     test_images = random.sample(
         selected_images,
         5,
     )
 
-    # --------------------------------------------------------
-    # Remaining 10 for training
-    # --------------------------------------------------------
+    # ========================================================
+    # REMAINING 10 TRAINING IMAGES
+    # ========================================================
 
     train_images = [image for image in selected_images if image not in test_images]
-
-    # --------------------------------------------------------
-    # Create directories
-    # --------------------------------------------------------
-
-    train_person_dir.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    test_person_dir.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
 
     employee_saved = False
 
     try:
+
+        # ====================================================
+        # CREATE DIRECTORIES
+        # ====================================================
+
+        train_person_dir.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        test_person_dir.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
 
         # ====================================================
         # SAVE TRAINING IMAGES
@@ -695,23 +853,14 @@ async def register(
         employee_saved = True
 
         # ====================================================
-        # CHECK TRAIN.PY
-        # ====================================================
-
-        if not TRAIN_SCRIPT.exists():
-
-            raise HTTPException(
-                status_code=500,
-                detail="train.py not found.",
-            )
-
-        # ====================================================
-        # START TRAINING
+        # START BACKGROUND TRAINING
         # ====================================================
 
         print()
         print("=" * 70)
-        print(f"STARTING YOLO TRAINING FOR {name}")
+
+        print(f"STARTING BACKGROUND TRAINING FOR " f"{name}")
+
         print("=" * 70)
 
         print(
@@ -724,123 +873,26 @@ async def register(
             len(test_images),
         )
 
-        print(
-            "Training script:",
-            TRAIN_SCRIPT,
-        )
+        training_pid = start_background_training()
 
         # ====================================================
-        # IMPORTANT WINDOWS FIX
-        #
-        # encoding="utf-8"
-        # errors="replace"
-        #
-        # prevents UnicodeDecodeError from YOLO output.
+        # RETURN IMMEDIATELY
         # ====================================================
-
-        process = subprocess.run(
-            [
-                sys.executable,
-                str(TRAIN_SCRIPT),
-            ],
-            cwd=str(BASE_DIR),
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=900,
-        )
-
-        # ====================================================
-        # PRINT TRAINING OUTPUT
-        # ====================================================
-
-        print()
-        print("=" * 70)
-        print("YOLO TRAINING OUTPUT")
-        print("=" * 70)
-
-        print(process.stdout)
-
-        if process.stderr:
-
-            print()
-            print("=" * 70)
-            print("YOLO TRAINING STDERR")
-            print("=" * 70)
-
-            print(process.stderr)
-
-        # ====================================================
-        # TRAINING FAILED
-        # ====================================================
-
-        if process.returncode != 0:
-
-            print()
-            print("=" * 70)
-            print("YOLO TRAINING FAILED")
-            print("=" * 70)
-
-            if employee_saved:
-
-                remove_employee(employee_id)
-
-            if train_person_dir.exists():
-
-                shutil.rmtree(
-                    train_person_dir,
-                    ignore_errors=True,
-                )
-
-            if test_person_dir.exists():
-
-                shutil.rmtree(
-                    test_person_dir,
-                    ignore_errors=True,
-                )
-
-            error_output = (
-                process.stderr.strip()
-                or process.stdout.strip()
-                or "Unknown training error."
-            )
-
-            raise HTTPException(
-                status_code=500,
-                detail=("YOLO training failed.\n\n" + error_output[-5000:]),
-            )
-
-        # ====================================================
-        # TRAINING SUCCESS
-        # ====================================================
-
-        print()
-        print("=" * 70)
-        print("YOLO TRAINING COMPLETED")
-        print("=" * 70)
 
         return {
             "success": True,
-            "message": ("Registration and YOLO " "training completed successfully."),
+            "message": (
+                "Registration completed successfully. "
+                "YOLO training started in the background."
+            ),
             "name": name,
             "employee_id": employee_id,
             "train_images": len(train_images),
             "test_images": len(test_images),
-            "training": "completed",
+            "training": "started",
+            "training_pid": training_pid,
+            "training_log": str(TRAINING_LOG),
         }
-
-    except subprocess.TimeoutExpired:
-
-        print()
-        print("=" * 70)
-        print("YOLO TRAINING TIMEOUT")
-        print("=" * 70)
-
-        raise HTTPException(
-            status_code=500,
-            detail=("YOLO training exceeded " "the 15 minute limit."),
-        )
 
     except HTTPException:
 
@@ -855,9 +907,39 @@ async def register(
 
         print(repr(error))
 
+        # ====================================================
+        # ROLLBACK EMPLOYEE
+        # ====================================================
+
+        if employee_saved:
+
+            remove_employee(employee_id)
+
+        # ====================================================
+        # REMOVE TRAIN DIRECTORY
+        # ====================================================
+
+        if train_person_dir.exists():
+
+            shutil.rmtree(
+                train_person_dir,
+                ignore_errors=True,
+            )
+
+        # ====================================================
+        # REMOVE TEST DIRECTORY
+        # ====================================================
+
+        if test_person_dir.exists():
+
+            shutil.rmtree(
+                test_person_dir,
+                ignore_errors=True,
+            )
+
         raise HTTPException(
             status_code=500,
-            detail=(f"Registration failed: {error}"),
+            detail=(f"Registration failed: " f"{error}"),
         )
 
 
@@ -889,9 +971,9 @@ async def record_attendance(
         EMPLOYEES_FILE,
     )
 
-    # --------------------------------------------------------
-    # Find employee
-    # --------------------------------------------------------
+    # ========================================================
+    # FIND EMPLOYEE
+    # ========================================================
 
     employee = find_employee(employee_id)
 
@@ -912,9 +994,9 @@ async def record_attendance(
         employee["name"],
     )
 
-    # --------------------------------------------------------
-    # Validate image
-    # --------------------------------------------------------
+    # ========================================================
+    # VALIDATE IMAGE
+    # ========================================================
 
     if not image.filename:
 
@@ -973,7 +1055,12 @@ async def record_attendance(
         # ====================================================
         # RUN RECORD.PY
         #
-        # IMPORTANT WINDOWS ENCODING FIX
+        # record.py sends:
+        #
+        #   JSON -> stdout
+        #   debug -> stderr
+        #
+        # So we can safely parse stdout.
         # ====================================================
 
         process = subprocess.run(
@@ -1023,7 +1110,9 @@ async def record_attendance(
 
         result = None
 
-        # First try complete output
+        # ----------------------------------------------------
+        # TRY COMPLETE OUTPUT
+        # ----------------------------------------------------
 
         try:
 
@@ -1034,8 +1123,7 @@ async def record_attendance(
             pass
 
         # ----------------------------------------------------
-        # If logs exist before JSON,
-        # find JSON line from bottom.
+        # SEARCH JSON FROM BOTTOM
         # ----------------------------------------------------
 
         if result is None:
@@ -1067,11 +1155,11 @@ async def record_attendance(
 
             raise HTTPException(
                 status_code=500,
-                detail=("Invalid response from record.py.\n\n" + output[-5000:]),
+                detail=("Invalid response from " "record.py.\n\n" + output[-5000:]),
             )
 
         # ====================================================
-        # RETURN
+        # RETURN RESULT
         # ====================================================
 
         return result
@@ -1091,7 +1179,7 @@ async def record_attendance(
 
         raise HTTPException(
             status_code=500,
-            detail=(f"Attendance failed: {error}"),
+            detail=(f"Attendance failed: " f"{error}"),
         )
 
     finally:
@@ -1130,6 +1218,86 @@ def employees():
 
 
 # ============================================================
+# TRAINING STATUS
+#
+# This endpoint does NOT interfere with training.
+#
+# Open:
+#
+# http://127.0.0.1:8000/training-status
+#
+# ============================================================
+
+
+@app.get("/training-status")
+def training_status():
+
+    if not TRAINING_LOG.exists():
+
+        return {
+            "success": True,
+            "status": "not_started",
+            "message": ("Training has not started."),
+            "training_log": str(TRAINING_LOG),
+        }
+
+    try:
+
+        with open(
+            TRAINING_LOG,
+            "r",
+            encoding="utf-8",
+            errors="replace",
+        ) as file:
+
+            lines = file.readlines()
+
+    except Exception as error:
+
+        return {
+            "success": False,
+            "status": "error",
+            "message": ("Unable to read training log."),
+            "error": str(error),
+        }
+
+    # ========================================================
+    # LAST 30 LINES
+    # ========================================================
+
+    last_lines = [line.rstrip() for line in lines[-30:]]
+
+    full_text = "".join(lines)
+
+    # ========================================================
+    # DETERMINE STATUS
+    # ========================================================
+
+    if "TRAINING COMPLETED" in full_text:
+
+        status = "completed"
+
+    elif "TRAINING FAILED" in full_text:
+
+        status = "failed"
+
+    elif "YOLO TRAINING PROCESS STARTED" in full_text:
+
+        status = "running"
+
+    else:
+
+        status = "started"
+
+    return {
+        "success": True,
+        "status": status,
+        "training_log": str(TRAINING_LOG),
+        "last_lines": last_lines,
+    }
+
+
+# ============================================================
 # HEALTH CHECK
 # ============================================================
 
@@ -1139,7 +1307,7 @@ def root():
 
     return {
         "success": True,
-        "message": ("FaceMark Attendance API is running."),
+        "message": ("FaceMark Attendance API " "is running."),
     }
 
 
