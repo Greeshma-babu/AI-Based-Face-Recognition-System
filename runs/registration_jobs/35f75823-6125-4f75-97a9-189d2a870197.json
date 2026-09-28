@@ -1,0 +1,19 @@
+{
+    "job_id": "35f75823-6125-4f75-97a9-189d2a870197",
+    "name": "Nimisha",
+    "status": "completed",
+    "message": "Registration, training and prediction completed",
+    "train_images": 10,
+    "test_images": 5,
+    "train_path": "C:\\AI\\FaceAttendence\\AI-Based-Face-Recognition-System\\datasets\\train\\Nimisha",
+    "test_path": "C:\\AI\\FaceAttendence\\AI-Based-Face-Recognition-System\\datasets\\test\\Nimisha",
+    "selected_test_image": "C:\\AI\\FaceAttendence\\AI-Based-Face-Recognition-System\\datasets\\test\\Nimisha\\001.jpg",
+    "prediction": null,
+    "confidence": null,
+    "created_at": "2026-09-26T07:33:10.448687",
+    "training_started_at": "2026-09-26T07:33:10.546788",
+    "training_completed_at": "2026-09-26T07:38:51.085443",
+    "test_image": "C:\\AI\\FaceAttendence\\AI-Based-Face-Recognition-System\\datasets\\test\\Nimisha\\001.jpg",
+    "prediction_output": "\n======================================================================\nSTARTING YOLO CLASSIFICATION TESTING\n======================================================================\n\nNew Person      : Nimisha\nTest Folder     : C:\\AI\\FaceAttendence\\AI-Based-Face-Recognition-System\\datasets\\test\\Nimisha\nSelected Image  : C:\\AI\\FaceAttendence\\AI-Based-Face-Recognition-System\\datasets\\test\\Nimisha\\004.jpg\nModel           : C:\\AI\\FaceAttendence\\AI-Based-Face-Recognition-System\\runs\\classify\\object_classification\\weights\\best.pt\n\nimage 1/1 C:\\AI\\FaceAttendence\\AI-Based-Face-Recognition-System\\datasets\\test\\Nimisha\\004.jpg: 224x224 Nimisha 0.83, Jyothika 0.14, Greeshma 0.02, Deepika 0.01, Alia 0.00, 67.9ms\nSpeed: 13.3ms preprocess, 67.9ms inference, 0.1ms postprocess per image at shape (1, 3, 224, 224)\n\n======================================================================\nCLASS CONFIDENCE\n======================================================================\nAlia                 : 0.04%\nDeepika              : 0.82%\nGreeshma             : 2.07%\nJyothika             : 13.97%\nNimisha              : 83.10%\n\n======================================================================\nPREDICTION\n======================================================================\nActual Person    : Nimisha\nPredicted Class  : Nimisha\nConfidence       : 83.10%\nTest Image       : C:\\AI\\FaceAttendence\\AI-Based-Face-Recognition-System\\datasets\\test\\Nimisha\\004.jpg\n======================================================================\n\nRESULT           : PASS\nPerson Recognized Successfully\n======================================================================\n",
+    "completed_at": "2026-09-26T07:39:03.256637"
+}
