@@ -217,7 +217,7 @@ Once both are running:
 3. **Record attendance** by entering the Employee ID and uploading a photo.
 4. View attendance records and charts on the **Dashboard**.
 
-## Screenshot 
+## Screenshots
 <img width="1867" height="796" alt="image" src="https://github.com/user-attachments/assets/84af577a-c6ae-4724-b65a-04f063f9c837" />
 <img width="1897" height="856" alt="image" src="https://github.com/user-attachments/assets/ee4c653d-8473-4fab-9886-b9887dec574a" />
 <img width="1912" height="692" alt="image" src="https://github.com/user-attachments/assets/e2e6ef5c-2d99-4a23-8ccc-a09a249c85b6" />
